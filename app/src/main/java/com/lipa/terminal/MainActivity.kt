@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.lipa.terminal.data.api.TerminalApi
-import com.lipa.terminal.data.mock.MockTerminalApi
+import com.lipa.terminal.data.api.TerminalApiFactory
 import com.lipa.terminal.data.repository.SessionRepository
 import com.lipa.terminal.domain.TerminalViewModel
 import com.lipa.terminal.nfc.NfcReader
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var nfcReader: NfcReader
 
-    private val api: TerminalApi = MockTerminalApi()
+    private val api: TerminalApi = TerminalApiFactory.create()
     private val sessionRepository = SessionRepository()
 
     private val viewModel: TerminalViewModel by viewModels {

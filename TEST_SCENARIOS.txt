@@ -1,0 +1,183 @@
+==============================================================
+  LIPA TERMINAL — SCENARIOS DE TEST (MODE MOCK)
+==============================================================
+
+L'app tourne en mode mock (MockTerminalApi). Aucune connexion
+serveur n'est requise. Voici les valeurs à saisir et les
+comportements attendus.
+
+--------------------------------------------------------------
+ 1. CONNEXION TERMINAL (DeviceLogin)
+--------------------------------------------------------------
+Champs : Serial Number + API Key
+
+  [SUCCES]
+    Serial Number  : LIPA-TEST-001  (n'importe quel texte non vide)
+    API Key        : test-key-123   (n'importe quel texte non vide)
+    -> Connecte le terminal, passe à l'écran OperatorLogin.
+
+  [ECHEC — champs vides]
+    Laisser un des deux champs vide
+    -> Erreur 400 "serialNumber and apiKey are required".
+
+Note : par défaut MockRules ne force aucune erreur. Pour
+simuler TERMINAL_SUSPENDED / TERMINAL_REVOKED / etc., il faut
+modifier MockRules dans le code (voir section "Forcer erreurs"
+en bas).
+
+--------------------------------------------------------------
+ 2. CONNEXION OPERATEUR (OperatorLogin)
+--------------------------------------------------------------
+Champs : Code pays + Numero + PIN
+
+  [SUCCES]
+    Code pays  : 269       (Comores, ou autre)
+    Numero     : 3211234   (au moins 1 chiffre)
+    PIN        : 1234      (entre 4 et 12 chiffres, sauf 0000)
+    -> Connecte l'operateur, passe à l'écran Idle.
+
+  [ECHEC — mauvais PIN]
+    PIN        : 0000
+    -> Erreur "Wrong PIN" (INVALID_CREDENTIALS).
+
+  [ECHEC — PIN trop court]
+    PIN        : 123
+    -> Erreur de validation.
+
+--------------------------------------------------------------
+ 3. SAISIE MONTANT (IdleScreen)
+--------------------------------------------------------------
+Le montant est en KMF (Francs comoriens), entiers uniquement.
+Trois seuils déterminent le comportement de paiement :
+
+   < 25 000 KMF              -> EXECUTED direct (pas de PIN)
+   >= 25 000 et < 50 000     -> demande PIN client
+   >= 50 000                 -> demande confirmation (gros montant)
+
+Tape un montant sur le clavier numerique, puis "Encaisser".
+
+--------------------------------------------------------------
+ 4. SCENARIOS DE PAIEMENT
+--------------------------------------------------------------
+
+  [A] PETIT MONTANT — paiement direct
+    Montant   : 5000
+    Action    : Encaisser -> "Simuler tap carte"
+    Attendu   : carte UID generee aleatoirement, paiement
+                EXECUTED, ecran Approved avec :
+                  - montant brut : 5000 KMF
+                  - frais (1.5%) : 75 KMF
+                  - net marchand : 4925 KMF
+                  - methode auth : UID_ONLY
+
+  [B] MONTANT MOYEN — PIN client requis
+    Montant   : 30000
+    Action    : Encaisser -> "Simuler tap carte"
+    Attendu   : ecran CustomerPin demande PIN au client.
+    PIN test  : 1234 (n'importe quel PIN de 4 chiffres)
+    Resultat  : paiement EXECUTED, frais = 450 KMF, methode
+                NFC_CHALLENGE_RESPONSE.
+
+  [C] GROS MONTANT — confirmation operateur
+    Montant   : 75000
+    Action    : Encaisser -> "Simuler tap carte"
+    Attendu   : ecran Confirmation demande validation operateur
+                (seuil 50 000).
+    Action    : Confirmer
+    Resultat  : EXECUTED, frais = 1125 KMF.
+
+  [D] IDEMPOTENCE — relecture transaction
+    Repeter exactement le meme paiement (meme montant et
+    enchainement) sans cloturer.
+    Attendu   : la 2eme requete renvoie le meme resultat avec
+                replayed=true. (Difficile a declencher dans l'UI
+                car l'idempotencyKey change a chaque charge; ce
+                test est plutot pour la couche API.)
+
+--------------------------------------------------------------
+ 5. ANNULATIONS / RETOUR
+--------------------------------------------------------------
+  - Bouton "Annuler" pendant TapCard / CustomerPin /
+    Confirmation -> retour a l'ecran Idle, montant conserve.
+  - Bouton retour Android (BackHandler) -> meme comportement.
+  - Sur Approved/Declined -> "Terminé" remet a zero et retour
+    a Idle.
+
+--------------------------------------------------------------
+ 6. MENU SHIFT (en bas de l'ecran Idle)
+--------------------------------------------------------------
+  Ouvre le menu operateur :
+    - Affiche numero operateur, terminalId, merchantId tronques
+    - Affiche fin de session (expire dans 8h apres login)
+    - "Terminer le service" -> deconnexion operateur, retour a
+      OperatorLogin.
+
+--------------------------------------------------------------
+ 7. ECRAN VERROUILLE (TerminalLocked)
+--------------------------------------------------------------
+Atteignable seulement si le terminal est suspendu/revoque ou si
+la session expire. Bouton "Se deconnecter" -> retour
+DeviceLogin.
+
+--------------------------------------------------------------
+ 8. FORCER DES ERREURS (test des chemins KO)
+--------------------------------------------------------------
+Pour tester les chemins d'erreur, modifier MainActivity.kt :
+
+  private val api: TerminalApi = MockTerminalApi(
+      MockRules(
+          forcedOutcome = ForcedOutcome.Decline(ErrorCodes.CARD_BLOCKED),
+          // ou : failTerminalLogin = true,
+          // ou : forceTerminalSuspended = true,
+          // ou : forceOperatorSuspended = true,
+      )
+  )
+
+  Valeurs ForcedOutcome.Decline possibles (code -> message) :
+    CARD_BLOCKED          -> Card is blocked
+    CARD_LOST             -> Card reported lost
+    CARD_STOLEN           -> Card reported stolen
+    CARD_EXPIRED          -> Card expired
+    CARD_NOT_ACTIVE       -> Card not active
+    CARD_AUTH_FAILED      -> Card authentication failed
+    PIN_LOCKED            -> PIN locked
+    INSUFFICIENT_BALANCE  -> Insufficient balance
+    LIMIT_EXCEEDED        -> Limit exceeded
+    WALLET_FROZEN         -> Wallet frozen
+
+  Toutes ces erreurs mènent à l'ecran Declined avec :
+    - bouton "Reessayer" -> revient a TapCard
+    - bouton "Terminé"   -> revient a Idle
+
+  Forcer 5 echecs de login terminal -> auto-suspension du
+  terminal (TERMINAL_SUSPENDED).
+
+--------------------------------------------------------------
+ 9. NFC
+--------------------------------------------------------------
+  - Si ton telephone n'a pas NFC ou NFC eteint : un bandeau
+    "NFC indisponible" apparait sur TapCard. Utiliser le bouton
+    "Simuler tap carte" pour generer un UID aleatoire valide.
+  - Si NFC actif : approcher n'importe quelle carte NFC du dos
+    du telephone. L'UID est lu et le paiement demarre.
+
+==============================================================
+ RACCOURCI : parcours rapide de bout en bout
+==============================================================
+  1. DeviceLogin   : LIPA-001 / test-key
+  2. OperatorLogin : 269 / 3211234 / 1234
+  3. Idle          : tape 5000 -> Encaisser
+  4. TapCard       : "Simuler tap carte"
+  5. Approved      : verifier montant, frais, net -> Termine
+  6. Idle          : tape 30000 -> Encaisser -> Simuler tap
+  7. CustomerPin   : 1234 -> EXECUTED -> Termine
+  8. Idle          : tape 75000 -> Encaisser -> Simuler tap
+  9. Confirmation  : Confirmer -> EXECUTED -> Termine
+ 10. Menu shift    : Terminer le service -> retour OperatorLogin
+
+ Comment basculer :
+
+ Mode	        Commande
+ Mock           (défaut)	rien à faire, assembleDebug
+ API locale	    adb reverse tcp:8080 tcp:8080 puis lancer avec -PKOMOPAY_USE_MOCK_API=false
+ API custom	    -PKOMOPAY_USE_MOCK_API=false -PKOMOPAY_API_BASE_URL=https://staging.komopay.io

@@ -17,10 +17,19 @@ android {
         versionName = "1.0"
     }
 
+    val komopayUseMockProp = (project.findProperty("KOMOPAY_USE_MOCK_API") as String?) ?: "true"
+    val komopayBaseUrlProp = (project.findProperty("KOMOPAY_API_BASE_URL") as String?) ?: "http://localhost:8080"
+
     buildTypes {
+        debug {
+            buildConfigField("boolean", "KOMOPAY_USE_MOCK_API", komopayUseMockProp)
+            buildConfigField("String", "KOMOPAY_API_BASE_URL", "\"$komopayBaseUrlProp\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            buildConfigField("boolean", "KOMOPAY_USE_MOCK_API", "false")
+            buildConfigField("String", "KOMOPAY_API_BASE_URL", "\"$komopayBaseUrlProp\"")
         }
     }
 
@@ -33,6 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -58,6 +68,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

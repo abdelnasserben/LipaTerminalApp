@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lipa.terminal.BuildConfig
 import com.lipa.terminal.domain.TapStatus
 import com.lipa.terminal.ui.components.AmountAlign
 import com.lipa.terminal.ui.components.AmountDisplay
@@ -92,7 +93,7 @@ fun TapCardScreen(
             )
             if (nfcUnavailable) {
                 Text(
-                    text = "NFC unavailable on this device — using simulated tap",
+                    text = "NFC unavailable on this device",
                     style = TextStyle(
                         fontFamily = LipaFonts.Mono,
                         fontSize = 11.sp,
@@ -104,7 +105,7 @@ fun TapCardScreen(
             }
         }
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (status == TapStatus.Waiting) {
+            if (status == TapStatus.Waiting && BuildConfig.KOMOPAY_USE_MOCK_API) {
                 PrimaryButton(
                     text = if (nfcUnavailable) "Simulate card tap" else "Simulate card tap (dev)",
                     onClick = onSimulateTap,
