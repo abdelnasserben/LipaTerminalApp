@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,7 +49,7 @@ fun TerminalApp(viewModel: TerminalViewModel) {
     }
 
     LipaTheme {
-        Column(modifier = Modifier.fillMaxSize().background(LipaColors.Bg)) {
+        Column(modifier = Modifier.fillMaxSize().background(LipaColors.Bg).navigationBarsPadding()) {
             val operatorLabel = operator?.phoneNumber?.takeLast(7)
             val showOperator = state.screen != Screen.DeviceLogin && state.screen != Screen.OperatorLogin && operator != null
             LipaStatusBar(

@@ -287,10 +287,19 @@ class TerminalViewModel(
                 it.copy(screen = Screen.Approved, executedResult = value)
             }
             TransactionControlOutcome.PENDING_PIN -> _state.update {
-                it.copy(screen = Screen.CustomerPin, pendingThreshold = value.matchedThresholdAmount, customerPinError = false)
+                it.copy(
+                    screen = Screen.CustomerPin,
+                    pendingThreshold = value.matchedThresholdAmount,
+                    customerPinError = false,
+                    tapStatus = TapStatus.Waiting,
+                )
             }
             TransactionControlOutcome.PENDING_CONFIRMATION -> _state.update {
-                it.copy(screen = Screen.Confirmation, pendingThreshold = value.matchedThresholdAmount)
+                it.copy(
+                    screen = Screen.Confirmation,
+                    pendingThreshold = value.matchedThresholdAmount,
+                    tapStatus = TapStatus.Waiting,
+                )
             }
             TransactionControlOutcome.PENDING_APPROVAL -> _state.update {
                 it.copy(screen = Screen.Declined, declineCode = "INTERNAL_ERROR", declineMessage = "Unexpected outcome")
