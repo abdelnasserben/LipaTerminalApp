@@ -111,7 +111,7 @@ class TerminalViewModel(
         viewModelScope.launch {
             when (val res = api.login(TerminalLoginRequest(serial, apiKey))) {
                 is ApiResult.Success -> {
-                    session.setTerminal(res.value, serial)
+                    session.setTerminal(res.value)
                     _state.update { it.copy(isBusy = false, screen = Screen.OperatorLogin) }
                 }
                 is ApiResult.Failure -> handleDeviceLoginFailure(res.error)

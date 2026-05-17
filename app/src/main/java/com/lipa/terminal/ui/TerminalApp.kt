@@ -50,7 +50,8 @@ fun TerminalApp(viewModel: TerminalViewModel) {
 
     LipaTheme {
         Column(modifier = Modifier.fillMaxSize().background(LipaColors.Bg).navigationBarsPadding()) {
-            val operatorLabel = operator?.phoneNumber?.takeLast(7)
+            val operatorLabel = operator?.fullName?.takeIf { it.isNotBlank() }
+                ?: operator?.phoneNumber?.takeLast(7)
             val showOperator = state.screen != Screen.DeviceLogin && state.screen != Screen.OperatorLogin && operator != null
             LipaStatusBar(
                 time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
@@ -130,9 +131,10 @@ fun TerminalApp(viewModel: TerminalViewModel) {
                 if (state.shiftMenuOpen && operator != null) {
                     val sessionEnds = operator?.expiresAt.orEmpty().take(16).replace("T", " ")
                     ShiftMenuSheet(
+                        operatorName = operator?.fullName.orEmpty(),
                         phoneCountryCode = operator?.phoneCountryCode.orEmpty(),
                         phoneNumber = operator?.phoneNumber.orEmpty(),
-                        terminalId = terminal?.terminalId.orEmpty().take(8) + "…",
+                        terminalSerial = terminal?.serialNumber.orEmpty(),
                         merchantId = terminal?.merchantId.orEmpty().take(8) + "…",
                         sessionEndsAt = sessionEnds,
                         onClose = viewModel::closeShiftMenu,

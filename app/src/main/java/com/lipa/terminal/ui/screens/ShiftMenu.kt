@@ -35,14 +35,16 @@ import com.lipa.terminal.ui.theme.LipaFonts
 
 @Composable
 fun ShiftMenuSheet(
+    operatorName: String,
     phoneCountryCode: String,
     phoneNumber: String,
-    terminalId: String,
+    terminalSerial: String,
     merchantId: String,
     sessionEndsAt: String,
     onClose: () -> Unit,
     onEndShift: () -> Unit,
 ) {
+    val displayName = operatorName.ifBlank { "+$phoneCountryCode $phoneNumber" }
     val interaction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
@@ -83,7 +85,7 @@ fun ShiftMenuSheet(
                 modifier = Modifier.padding(bottom = 6.dp),
             )
             Text(
-                text = "+$phoneCountryCode $phoneNumber",
+                text = displayName,
                 style = TextStyle(
                     fontFamily = LipaFonts.Display,
                     fontWeight = FontWeight.SemiBold,
@@ -95,8 +97,9 @@ fun ShiftMenuSheet(
             )
             LipaCard(padding = 16.dp) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    KeyValueRow("Operator", "+$phoneCountryCode $phoneNumber")
-                    KeyValueRow("Terminal", terminalId)
+                    KeyValueRow("Operator", displayName)
+                    KeyValueRow("Phone", "+$phoneCountryCode $phoneNumber")
+                    KeyValueRow("Terminal", terminalSerial.ifBlank { "—" })
                     KeyValueRow("Merchant", merchantId)
                     KeyValueRow("Session ends", sessionEndsAt)
                 }

@@ -23,7 +23,10 @@ data class TerminalTokenResponse(
     val accessToken: String,
     val accessTokenExpiresAt: String,
     val terminalId: String,
+    val terminalSerialNumber: String,
     val merchantId: String,
+    val operatorId: String? = null,
+    val operatorFullName: String? = null,
 )
 
 @Serializable

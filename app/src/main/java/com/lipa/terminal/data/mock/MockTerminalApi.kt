@@ -56,6 +56,7 @@ class MockTerminalApi(
                 accessToken = "terminal." + UUID.randomUUID(),
                 accessTokenExpiresAt = now.plus(30, ChronoUnit.DAYS).toString(),
                 terminalId = UUID.randomUUID().toString(),
+                terminalSerialNumber = req.serialNumber,
                 merchantId = UUID.randomUUID().toString(),
             ),
             httpStatus = 200,
@@ -86,7 +87,10 @@ class MockTerminalApi(
                 accessToken = "operator." + UUID.randomUUID(),
                 accessTokenExpiresAt = now.plus(8, ChronoUnit.HOURS).toString(),
                 terminalId = UUID.randomUUID().toString(),
+                terminalSerialNumber = "POS-MOCK-0001",
                 merchantId = UUID.randomUUID().toString(),
+                operatorId = UUID.randomUUID().toString(),
+                operatorFullName = "Cashier ${req.phoneNumber.takeLast(4)}",
             ),
             httpStatus = 200,
         )

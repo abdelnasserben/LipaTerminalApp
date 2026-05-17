@@ -1,6 +1,6 @@
 # Terminal - Frontend Specification Document
 
-**Version:** 1.0 | **Source:** KomoPay backend codebase analysis | **Date:** 2026-05-14  
+**Version:** 1.1 | **Source:** KomoPay backend codebase analysis | **Date:** 2026-05-16  
 **Status:** Single source of truth. Do not call or display anything that is not listed here.
 
 ---
@@ -125,6 +125,7 @@ Response `200 ApiResponse<TerminalTokenResponse>`:
     "accessToken": "jwt",
     "accessTokenExpiresAt": "2026-06-13T12:00:00Z",
     "terminalId": "uuid",
+    "terminalSerialNumber": "POS-AB12-0007",
     "merchantId": "uuid"
   },
   "timestamp": "2026-05-14T12:00:00Z"
@@ -166,7 +167,10 @@ Response `200 ApiResponse<TerminalTokenResponse>`:
     "accessToken": "jwt",
     "accessTokenExpiresAt": "2026-05-14T20:00:00Z",
     "terminalId": "uuid",
-    "merchantId": "uuid"
+    "terminalSerialNumber": "POS-AB12-0007",
+    "merchantId": "uuid",
+    "operatorId": "uuid",
+    "operatorFullName": "Cashier Name"
   },
   "timestamp": "2026-05-14T12:00:00Z"
 }
@@ -306,11 +310,14 @@ TerminalTokenResponse = {
   accessToken: string;
   accessTokenExpiresAt: instant;
   terminalId: uuid;
+  terminalSerialNumber: string;
   merchantId: uuid;
+  operatorId?: uuid;          // present on /auth/operator-login; absent on /auth/login
+  operatorFullName?: string;  // present on /auth/operator-login; absent on /auth/login
 }
 ```
 
-Used by both `/auth/login` and `/auth/operator-login`. There is no `refreshToken` field — terminal sessions never refresh.
+Used by both `/auth/login` and `/auth/operator-login`. The backend omits `null` JSON fields, so terminal login responses do not include `operatorId` or `operatorFullName`. There is no `refreshToken` field — terminal sessions never refresh.
 
 ### 7.2 NFC Challenge
 

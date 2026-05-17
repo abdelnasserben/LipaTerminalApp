@@ -20,6 +20,8 @@ data class OperatorSession(
     val expiresAt: String,
     val phoneCountryCode: String,
     val phoneNumber: String,
+    val operatorId: String?,
+    val fullName: String?,
 )
 
 class SessionRepository {
@@ -29,13 +31,13 @@ class SessionRepository {
     private val _operator = MutableStateFlow<OperatorSession?>(null)
     val operator: StateFlow<OperatorSession?> = _operator.asStateFlow()
 
-    fun setTerminal(token: TerminalTokenResponse, serialNumber: String) {
+    fun setTerminal(token: TerminalTokenResponse) {
         _terminal.value = TerminalSession(
             token = token.accessToken,
             terminalId = token.terminalId,
             merchantId = token.merchantId,
             expiresAt = token.accessTokenExpiresAt,
-            serialNumber = serialNumber,
+            serialNumber = token.terminalSerialNumber,
         )
     }
 
@@ -47,6 +49,8 @@ class SessionRepository {
             expiresAt = token.accessTokenExpiresAt,
             phoneCountryCode = phoneCountryCode,
             phoneNumber = phoneNumber,
+            operatorId = token.operatorId,
+            fullName = token.operatorFullName,
         )
     }
 
