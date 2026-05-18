@@ -169,22 +169,19 @@ class MockTerminalApi(
             }
         }
 
-        if (req.pinValidated == true) {
+        if (!req.pin.isNullOrBlank()) {
             val attemptsKey = req.cardUid
             val attempts = customerPinAttempts.getOrDefault(attemptsKey, 0)
             if (attempts >= CUSTOMER_PIN_MAX_ATTEMPTS) {
-                return failure(422, ErrorCodes.PIN_LOCKED, "Customer PIN locked after $CUSTOMER_PIN_MAX_ATTEMPTS failed attempts")
+                return failure(422, ErrorCodes.AUTH_PIN_LOCKED, "Customer PIN locked after $CUSTOMER_PIN_MAX_ATTEMPTS failed attempts")
             }
-            if (req.customerPin.isNullOrBlank()) {
-                return failure(400, ErrorCodes.VALIDATION_FIELD_REQUIRED, "customerPin is required when pinValidated is true")
-            }
-            if (req.customerPin != MOCK_VALID_CUSTOMER_PIN) {
+            if (req.pin != MOCK_VALID_CUSTOMER_PIN) {
                 customerPinAttempts[attemptsKey] = attempts + 1
                 val remaining = CUSTOMER_PIN_MAX_ATTEMPTS - (attempts + 1)
                 return if (remaining <= 0) {
-                    failure(422, ErrorCodes.PIN_LOCKED, "Customer PIN locked after $CUSTOMER_PIN_MAX_ATTEMPTS failed attempts")
+                    failure(422, ErrorCodes.AUTH_PIN_LOCKED, "Customer PIN locked after $CUSTOMER_PIN_MAX_ATTEMPTS failed attempts")
                 } else {
-                    failure(422, ErrorCodes.INVALID_PIN, "Wrong customer PIN ($remaining attempts left)")
+                    failure(401, ErrorCodes.AUTH_PIN_INVALID, "Wrong customer PIN ($remaining attempts left)")
                 }
             }
             customerPinAttempts.remove(attemptsKey)
@@ -201,8 +198,6 @@ class MockTerminalApi(
 
         return when (outcome) {
             TransactionControlOutcome.EXECUTED -> {
-                if (req.pinValidated == false && req.amount >= 100000) {
-                }
                 val fee = (req.amount * 15 / 1000)
                 val authMethod = if (req.challengeId != null) CardAuthMethod.NFC_CHALLENGE_RESPONSE else CardAuthMethod.UID_ONLY
                 val response = TerminalPaymentResponse(
@@ -246,7 +241,7 @@ class MockTerminalApi(
     }
 
     private fun autoOutcome(req: TerminalPaymentRequest): TransactionControlOutcome {
-        if (req.confirmationAcknowledged == true || req.pinValidated == true) {
+        if (req.confirmationAcknowledged == true || !req.pin.isNullOrBlank()) {
             return TransactionControlOutcome.EXECUTED
         }
         return when {

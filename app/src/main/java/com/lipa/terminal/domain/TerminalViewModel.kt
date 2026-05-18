@@ -47,7 +47,6 @@ data class TerminalUiState(
     val cardAuthResponse: String? = null,
     val idempotencyKey: String? = null,
     val correlationId: String? = null,
-    val pinValidated: Boolean = false,
     val customerPin: String? = null,
     val confirmationAcknowledged: Boolean = false,
     val pendingThreshold: Long? = null,
@@ -190,7 +189,6 @@ class TerminalViewModel(
                 cardAuthResponse = null,
                 idempotencyKey = UUID.randomUUID().toString(),
                 correlationId = UUID.randomUUID().toString(),
-                pinValidated = false,
                 customerPin = null,
                 confirmationAcknowledged = false,
                 declineCode = null,
@@ -266,19 +264,17 @@ class TerminalViewModel(
             amount = amount,
             challengeId = s.challengeId,
             cardAuthResponse = s.cardAuthResponse,
-            pinValidated = if (s.pinValidated) true else null,
+            pin = s.customerPin,
             confirmationAcknowledged = if (s.confirmationAcknowledged) true else null,
-            customerPin = s.customerPin,
         )
 
         when (val res = api.submitPayment(op.token, idempotencyKey, s.correlationId, req)) {
             is ApiResult.Success -> handlePaymentSuccess(res.value, res.httpStatus)
             is ApiResult.Failure -> {
-                if (res.error.code == ErrorCodes.INVALID_PIN && s.screen == Screen.CustomerPin) {
+                if (res.error.code == ErrorCodes.AUTH_PIN_INVALID && s.screen == Screen.CustomerPin) {
                     _state.update {
                         it.copy(
                             tapStatus = TapStatus.Waiting,
-                            pinValidated = false,
                             customerPin = null,
                             customerPinError = true,
                             declineMessage = res.error.message,
@@ -327,7 +323,6 @@ class TerminalViewModel(
         if (pin.length != 4) return
         _state.update {
             it.copy(
-                pinValidated = true,
                 customerPin = pin,
                 tapStatus = TapStatus.Authorizing,
                 customerPinError = false,
@@ -378,7 +373,6 @@ class TerminalViewModel(
                 challengeId = null,
                 cardAuthResponse = null,
                 idempotencyKey = UUID.randomUUID().toString(),
-                pinValidated = false,
                 customerPin = null,
                 confirmationAcknowledged = false,
                 declineCode = null,

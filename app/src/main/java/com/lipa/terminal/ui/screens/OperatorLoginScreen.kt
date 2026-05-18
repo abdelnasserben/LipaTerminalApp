@@ -47,7 +47,7 @@ fun OperatorLoginScreen(
     onSignOutOfTerminal: () -> Unit,
 ) {
     var step by rememberSaveable { mutableStateOf("phone") }
-    var phone by rememberSaveable { mutableStateOf("3212345") }
+    var phone by rememberSaveable { mutableStateOf("") }
     var pin by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(pin) {
@@ -135,6 +135,7 @@ fun OperatorLoginScreen(
                         onValueChange = { phone = it.filter { c -> c.isDigit() }.take(10) },
                         mono = true,
                         keyboardType = KeyboardType.Phone,
+                        placeholder = "3212345",
                         modifier = Modifier.weight(1f),
                     )
                 }

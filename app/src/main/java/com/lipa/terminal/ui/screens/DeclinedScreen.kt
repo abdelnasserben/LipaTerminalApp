@@ -48,6 +48,7 @@ private fun copyFor(code: String?): DeclineCopy = when (code) {
     ErrorCodes.CARD_NOT_ACTIVE -> DeclineCopy("Card not active", "The card has not been activated yet.", false)
     ErrorCodes.CARD_AUTH_FAILED -> DeclineCopy("Card authentication failed", "The card did not respond correctly. Try tapping again.", true)
     ErrorCodes.PIN_LOCKED -> DeclineCopy("PIN locked", "Too many wrong PIN attempts. Customer must contact Lipa to unlock.", false)
+    ErrorCodes.AUTH_PIN_LOCKED -> DeclineCopy("PIN locked", "Too many wrong PIN attempts. Try again in 15 minutes or contact Lipa.", false)
     ErrorCodes.INSUFFICIENT_BALANCE -> DeclineCopy("Insufficient balance", "The customer does not have enough funds for this amount.", true)
     ErrorCodes.LIMIT_EXCEEDED -> DeclineCopy("Limit exceeded", "This payment exceeds the customer's configured limit.", true)
     ErrorCodes.WALLET_FROZEN -> DeclineCopy("Wallet frozen", "The customer's wallet is temporarily frozen.", false)

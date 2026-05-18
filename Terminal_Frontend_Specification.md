@@ -244,7 +244,7 @@ The Terminal frontend cannot: view profile, balance, history, statements; do cas
 
 | Method | Path | Auth | Headers | Request | Response | Primary errors | Frontend notes |
 |---|---|---|---|---|---|---|---|
-| POST | `/api/v1/terminal/transactions/payment` | Operator JWT | `Authorization`, `Idempotency-Key`, optional `X-Correlation-Id` | `TerminalPaymentRequest` | `200 ApiResponse<TerminalPaymentResponse>` (executed) or `202 ApiResponse<TerminalPaymentResponse>` (control fired) | `400 VALIDATION_FIELD_REQUIRED`, `400 VALIDATION_ERROR`, `400 MISSING_IDEMPOTENCY_KEY`, `401 UNAUTHORIZED`, `403 FORBIDDEN`, `404 CARD_NOT_FOUND`, `404 CUSTOMER_NOT_FOUND`, `404 TERMINAL_NOT_FOUND`, `404 MERCHANT_NOT_FOUND`, `404 WALLET_NOT_FOUND`, `404 OPERATOR_NOT_FOUND`, `409 DUPLICATE_IDEMPOTENCY_KEY`, `422 TERMINAL_SUSPENDED`, `422 TERMINAL_REVOKED`, `422 TERMINAL_NOT_REGISTERED`, `422 TERMINAL_API_KEY_EXPIRED`, `422 CARD_BLOCKED`, `422 CARD_LOST`, `422 CARD_STOLEN`, `422 CARD_EXPIRED`, `422 CARD_NOT_ACTIVE`, `422 CARD_AUTH_FAILED`, `422 PIN_LOCKED`, `422 OPERATOR_SUSPENDED`, `422 OPERATOR_NOT_AUTHORIZED_ON_TERMINAL`, `422 ACTOR_SUSPENDED`, `422 WALLET_FROZEN`, `422 WALLET_SUSPENDED`, `422 WALLET_CLOSED`, `422 INSUFFICIENT_BALANCE`, `422 LIMIT_EXCEEDED`, `422 CONFIG_LIMIT_PROFILE_NOT_FOUND`, `422 CONFIG_RULE_INACTIVE` | `terminalId` and `operatorId` come from the JWT, never the body. `200` = executed, `202` = a PIN/confirmation control fired and must be cleared then resubmitted. |
+| POST | `/api/v1/terminal/transactions/payment` | Operator JWT | `Authorization`, `Idempotency-Key`, optional `X-Correlation-Id` | `TerminalPaymentRequest` | `200 ApiResponse<TerminalPaymentResponse>` (executed) or `202 ApiResponse<TerminalPaymentResponse>` (control fired) | `400 VALIDATION_FIELD_REQUIRED`, `400 VALIDATION_ERROR`, `400 MISSING_IDEMPOTENCY_KEY`, `401 UNAUTHORIZED`, `401 AUTH_PIN_INVALID`, `403 FORBIDDEN`, `404 CARD_NOT_FOUND`, `404 CUSTOMER_NOT_FOUND`, `404 TERMINAL_NOT_FOUND`, `404 MERCHANT_NOT_FOUND`, `404 WALLET_NOT_FOUND`, `404 OPERATOR_NOT_FOUND`, `409 DUPLICATE_IDEMPOTENCY_KEY`, `422 TERMINAL_SUSPENDED`, `422 TERMINAL_REVOKED`, `422 TERMINAL_NOT_REGISTERED`, `422 TERMINAL_API_KEY_EXPIRED`, `422 CARD_BLOCKED`, `422 CARD_LOST`, `422 CARD_STOLEN`, `422 CARD_EXPIRED`, `422 CARD_NOT_ACTIVE`, `422 CARD_AUTH_FAILED`, `422 PIN_LOCKED`, `422 AUTH_PIN_LOCKED`, `422 OPERATOR_SUSPENDED`, `422 OPERATOR_NOT_AUTHORIZED_ON_TERMINAL`, `422 ACTOR_SUSPENDED`, `422 WALLET_FROZEN`, `422 WALLET_SUSPENDED`, `422 WALLET_CLOSED`, `422 INSUFFICIENT_BALANCE`, `422 LIMIT_EXCEEDED`, `422 CONFIG_LIMIT_PROFILE_NOT_FOUND`, `422 CONFIG_RULE_INACTIVE` | `terminalId` and `operatorId` come from the JWT, never the body. `200` = executed, `202` = a PIN/confirmation control fired and must be cleared then resubmitted. |
 
 ---
 
@@ -291,7 +291,7 @@ TerminalPaymentRequest = {
   amount: long;                    // strictly positive
   challengeId?: string;            // from POST /nfc/challenge — must be paired with cardAuthResponse
   cardAuthResponse?: hex;          // hex-encoded raw card response — must be paired with challengeId
-  pinValidated?: boolean;          // default false; set true to clear a PENDING_PIN control
+  pin?: string;                    // customer's auth PIN typed on the terminal — required to clear a PENDING_PIN control; verified server-side, wrong PIN rejects with 401 AUTH_PIN_INVALID
   confirmationAcknowledged?: boolean; // default false; set true to clear a PENDING_CONFIRMATION control
 }
 ```
@@ -449,7 +449,7 @@ Payment flow (UID_ONLY):
 - Tap the card, read the 14-hex-char UID.
 - Call `POST /api/v1/terminal/transactions/payment` with `cardUid`, `amount`, and an `Idempotency-Key`.
 - `200 outcome=EXECUTED` → show the transaction result.
-- `202 outcome=PENDING_PIN` → collect the customer PIN through the existing PIN mechanism, then resubmit **with the same `Idempotency-Key`** and `pinValidated=true`.
+- `202 outcome=PENDING_PIN` → collect the customer's auth PIN on the terminal, then resubmit **with the same `Idempotency-Key`** and `pin=<rawPin>`. The backend verifies the PIN server-side; a wrong PIN returns `401 AUTH_PIN_INVALID` and counts toward the 3-strikes / 15-min lock (`422 AUTH_PIN_LOCKED`). Priority is Approval > PIN > Confirmation, so an unanswered PIN never falls back to a confirmation prompt.
 - `202 outcome=PENDING_CONFIRMATION` → show the confirmation prompt with `matchedThresholdAmount`, get explicit acknowledgement, then resubmit **with the same `Idempotency-Key`** and `confirmationAcknowledged=true`.
 
 Payment flow (challenge-response):
@@ -511,6 +511,27 @@ The backend is authoritative for every check; the frontend must never assume suc
 | JWT claims & authorities | `security.infrastructure.JwtService`, `security.domain.JwtPrincipal` |
 | Error codes | `shared.infrastructure.exception.ErrorCode` |
 | Enums | `terminal.domain.TerminalStatus`, `identity.domain.OperatorStatus`, `identity.domain.MerchantStatus`, `card.domain.CardStatus`, `shared.domain.CardAuthMethod`, `shared.domain.TransactionType`, `transaction.domain.TransactionStatus`, `transaction.application.TransactionControlOutcome`, `shared.domain.ChannelType`, `wallet.domain.WalletStatus` |
+
+---
+
+## Notifications (terminal scope)
+
+The terminal does not host its own inbox today. When the logged-in operator
+is authenticated as a `MERCHANT_OPERATOR`, the same shared endpoints used by
+the Customer/Merchant apps are available and return notifications scoped to
+that operator (none generated in Vague 1 — reserved for future operator-level
+alerts such as session events).
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET`  | `/api/v1/notifications/unread-count` | Optional badge in the operator menu |
+| `GET`  | `/api/v1/notifications?status=UNREAD` | Optional list view |
+
+Vague 1 ships no notifications targeting `MERCHANT_OPERATOR` directly —
+`TRANSACTION_CONFIRMED` and `TRANSACTION_RECEIVED` go to the merchant
+aggregate, not the operator who tapped the card. A toast at the end of a
+sale stays purely terminal-side (driven by the HTTP response of
+`PaymentUseCase`, not by the notification module).
 
 ---
 

@@ -43,7 +43,7 @@ fun DeviceLoginScreen(
     isBusy: Boolean,
     onLogin: (serial: String, apiKey: String) -> Unit,
 ) {
-    var serial by rememberSaveable { mutableStateOf("POS-AB12-0007") }
+    var serial by rememberSaveable { mutableStateOf("") }
     var apiKey by rememberSaveable { mutableStateOf("") }
 
     Column(
@@ -85,7 +85,12 @@ fun DeviceLoginScreen(
         )
 
         FieldLabel("Serial number")
-        TextInputField(value = serial, onValueChange = { serial = it }, mono = true)
+        TextInputField(
+            value = serial,
+            onValueChange = { serial = it },
+            mono = true,
+            placeholder = "POS-AB12-0007",
+        )
         Spacer(modifier = Modifier.size(16.dp))
         FieldLabel("API key")
         TextInputField(
