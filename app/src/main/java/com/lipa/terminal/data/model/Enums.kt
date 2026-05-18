@@ -53,6 +53,7 @@ object ErrorCodes {
     const val CARD_NOT_ACTIVE = "CARD_NOT_ACTIVE"
     const val CARD_AUTH_FAILED = "CARD_AUTH_FAILED"
     const val PIN_LOCKED = "PIN_LOCKED"
+    const val INVALID_PIN = "INVALID_PIN"
     const val WALLET_FROZEN = "WALLET_FROZEN"
     const val WALLET_SUSPENDED = "WALLET_SUSPENDED"
     const val WALLET_CLOSED = "WALLET_CLOSED"

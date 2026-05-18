@@ -29,4 +29,5 @@ data class TerminalPaymentRequest(
     val cardAuthResponse: String? = null,
     val pinValidated: Boolean? = null,
     val confirmationAcknowledged: Boolean? = null,
+    val customerPin: String? = null,
 )

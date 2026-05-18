@@ -26,6 +26,12 @@ class MockTerminalApi(
     private val idempotencyStore = mutableMapOf<String, TerminalPaymentResponse>()
     private val challenges = mutableMapOf<String, Pair<String, Instant>>()
     private var apiKeyAttempts = 0
+    private val customerPinAttempts = mutableMapOf<String, Int>()
+
+    companion object {
+        private const val MOCK_VALID_CUSTOMER_PIN = "1234"
+        private const val CUSTOMER_PIN_MAX_ATTEMPTS = 3
+    }
 
     override suspend fun login(req: TerminalLoginRequest): ApiResult<TerminalTokenResponse> {
         delay(700)
@@ -161,6 +167,27 @@ class MockTerminalApi(
             if (Instant.now().isAfter(expiresAt) || boundUid != req.cardUid) {
                 return failure(422, ErrorCodes.CARD_AUTH_FAILED, "Challenge expired or UID mismatch")
             }
+        }
+
+        if (req.pinValidated == true) {
+            val attemptsKey = req.cardUid
+            val attempts = customerPinAttempts.getOrDefault(attemptsKey, 0)
+            if (attempts >= CUSTOMER_PIN_MAX_ATTEMPTS) {
+                return failure(422, ErrorCodes.PIN_LOCKED, "Customer PIN locked after $CUSTOMER_PIN_MAX_ATTEMPTS failed attempts")
+            }
+            if (req.customerPin.isNullOrBlank()) {
+                return failure(400, ErrorCodes.VALIDATION_FIELD_REQUIRED, "customerPin is required when pinValidated is true")
+            }
+            if (req.customerPin != MOCK_VALID_CUSTOMER_PIN) {
+                customerPinAttempts[attemptsKey] = attempts + 1
+                val remaining = CUSTOMER_PIN_MAX_ATTEMPTS - (attempts + 1)
+                return if (remaining <= 0) {
+                    failure(422, ErrorCodes.PIN_LOCKED, "Customer PIN locked after $CUSTOMER_PIN_MAX_ATTEMPTS failed attempts")
+                } else {
+                    failure(422, ErrorCodes.INVALID_PIN, "Wrong customer PIN ($remaining attempts left)")
+                }
+            }
+            customerPinAttempts.remove(attemptsKey)
         }
 
         val forced = rules.forcedOutcome

@@ -6,6 +6,7 @@ import com.lipa.terminal.data.api.ApiResult
 import com.lipa.terminal.data.api.TerminalApi
 import com.lipa.terminal.data.model.ApiError
 import com.lipa.terminal.data.model.CardAuthMethod
+import com.lipa.terminal.data.model.ErrorCodes
 import com.lipa.terminal.data.model.NfcChallengeRequest
 import com.lipa.terminal.data.model.OperatorLoginRequest
 import com.lipa.terminal.data.model.TerminalLoginRequest
@@ -47,6 +48,7 @@ data class TerminalUiState(
     val idempotencyKey: String? = null,
     val correlationId: String? = null,
     val pinValidated: Boolean = false,
+    val customerPin: String? = null,
     val confirmationAcknowledged: Boolean = false,
     val pendingThreshold: Long? = null,
     val executedResult: TerminalPaymentResponse? = null,
@@ -189,6 +191,7 @@ class TerminalViewModel(
                 idempotencyKey = UUID.randomUUID().toString(),
                 correlationId = UUID.randomUUID().toString(),
                 pinValidated = false,
+                customerPin = null,
                 confirmationAcknowledged = false,
                 declineCode = null,
                 executedResult = null,
@@ -265,17 +268,30 @@ class TerminalViewModel(
             cardAuthResponse = s.cardAuthResponse,
             pinValidated = if (s.pinValidated) true else null,
             confirmationAcknowledged = if (s.confirmationAcknowledged) true else null,
+            customerPin = s.customerPin,
         )
 
         when (val res = api.submitPayment(op.token, idempotencyKey, s.correlationId, req)) {
             is ApiResult.Success -> handlePaymentSuccess(res.value, res.httpStatus)
             is ApiResult.Failure -> {
-                _state.update {
-                    it.copy(
-                        screen = Screen.Declined,
-                        declineCode = res.error.code,
-                        declineMessage = res.error.message,
-                    )
+                if (res.error.code == ErrorCodes.INVALID_PIN && s.screen == Screen.CustomerPin) {
+                    _state.update {
+                        it.copy(
+                            tapStatus = TapStatus.Waiting,
+                            pinValidated = false,
+                            customerPin = null,
+                            customerPinError = true,
+                            declineMessage = res.error.message,
+                        )
+                    }
+                } else {
+                    _state.update {
+                        it.copy(
+                            screen = Screen.Declined,
+                            declineCode = res.error.code,
+                            declineMessage = res.error.message,
+                        )
+                    }
                 }
             }
         }
@@ -309,7 +325,14 @@ class TerminalViewModel(
 
     fun submitCustomerPin(pin: String) {
         if (pin.length != 4) return
-        _state.update { it.copy(pinValidated = true, tapStatus = TapStatus.Authorizing, customerPinError = false) }
+        _state.update {
+            it.copy(
+                pinValidated = true,
+                customerPin = pin,
+                tapStatus = TapStatus.Authorizing,
+                customerPinError = false,
+            )
+        }
         viewModelScope.launch {
             if (_state.value.authMode != CardAuthMethod.UID_ONLY) {
                 val op = session.operator.value
@@ -356,6 +379,7 @@ class TerminalViewModel(
                 cardAuthResponse = null,
                 idempotencyKey = UUID.randomUUID().toString(),
                 pinValidated = false,
+                customerPin = null,
                 confirmationAcknowledged = false,
                 declineCode = null,
             )
