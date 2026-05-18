@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git -C \"C:\\\\Users\\\\ahama\\\\OneDrive\\\\Documenten\\\\androidproject\\\\LipaTerminalApp\" add -A)",
-      "Bash(git -C 'C:\\\\Users\\\\ahama\\\\OneDrive\\\\Documenten\\\\androidproject\\\\LipaTerminalApp' commit -m ' *)"
-    ]
-  }
-}
