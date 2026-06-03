@@ -248,11 +248,6 @@ class TerminalViewModel(
         }
     }
 
-    fun simulateCardTap() {
-        val uid = (1..14).joinToString("") { "0123456789ABCDEF".random().toString() }
-        onCardDetected(uid)
-    }
-
     private suspend fun submitPayment() {
         val s = _state.value
         val op = session.operator.value ?: return

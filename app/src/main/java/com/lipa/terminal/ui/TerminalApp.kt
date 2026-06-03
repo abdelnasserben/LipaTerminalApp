@@ -87,7 +87,6 @@ fun TerminalApp(viewModel: TerminalViewModel) {
                         authModeLabel = if (state.authMode == CardAuthMethod.UID_ONLY) "UID_ONLY" else "CHALLENGE",
                         nfcUnavailable = !state.nfcSupported || !state.nfcEnabled,
                         onCancel = viewModel::cancelCharge,
-                        onSimulateTap = viewModel::simulateCardTap,
                     )
                     Screen.CustomerPin -> CustomerPinScreen(
                         amount = state.amountInput.toLongOrNull() ?: 0L,

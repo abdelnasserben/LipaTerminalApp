@@ -17,18 +17,27 @@ android {
         versionName = "1.0"
     }
 
-    val komopayUseMockProp = (project.findProperty("KOMOPAY_USE_MOCK_API") as String?) ?: "true"
-    val komopayBaseUrlProp = (project.findProperty("KOMOPAY_API_BASE_URL") as String?) ?: "http://localhost:8080"
+    // Environment selection, mirroring the Lipa customer/agent apps:
+    //   -PENV=local  -> talks to a backend on the dev machine (default)
+    //   -PENV=prod   -> talks to the production API
+    // An explicit -PKOMOPAY_API_BASE_URL=... always wins over the per-env default.
+    val komopayEnvProp = ((project.findProperty("ENV") as String?) ?: "local").trim().lowercase()
+    val komopayLocalUrl = "http://localhost:8080"
+    val komopayProdUrl = "https://api.lipa.km"
+    val komopayBaseUrlOverride = (project.findProperty("KOMOPAY_API_BASE_URL") as String?)?.trim().orEmpty()
+    val komopayBaseUrlProp = when {
+        komopayBaseUrlOverride.isNotEmpty() -> komopayBaseUrlOverride
+        komopayEnvProp == "prod" || komopayEnvProp == "production" -> komopayProdUrl
+        else -> komopayLocalUrl
+    }
 
     buildTypes {
         debug {
-            buildConfigField("boolean", "KOMOPAY_USE_MOCK_API", komopayUseMockProp)
             buildConfigField("String", "KOMOPAY_API_BASE_URL", "\"$komopayBaseUrlProp\"")
         }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("boolean", "KOMOPAY_USE_MOCK_API", "false")
             buildConfigField("String", "KOMOPAY_API_BASE_URL", "\"$komopayBaseUrlProp\"")
         }
     }
